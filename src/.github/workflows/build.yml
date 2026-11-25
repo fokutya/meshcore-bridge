@@ -1,0 +1,23 @@
+name: Build Firmware
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PlatformIO
+        run: pip install -U platformio
+      - name: Build & Merge Binaries
+        run: |
+          pio run
+          mkdir -p release
+          ~/.platformio/penv/bin/python -m esptool --chip esp32 merge_bin -o release/meshcore-bridge-esp32.bin --flash_mode dio --flash_freq 40m --flash_size 4MB 0x1000 .pio/build/esp32/bootloader.bin 0x8000 .pio/build/esp32/partitions.bin 0x10000 .pio/build/esp32/firmware.bin
+          ~/.platformio/penv/bin/python -m esptool --chip esp32s3 merge_bin -o release/meshcore-bridge-esp32s3.bin --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0 .pio/build/esp32s3/bootloader.bin 0x8000 .pio/build/esp32s3/partitions.bin 0x10000 .pio/build/esp32s3/firmware.bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meshcore-bridge-firmware
+          path: release/*.bin
